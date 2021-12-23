@@ -4,7 +4,7 @@ CurrentModule = SimpleCaching
 
 # SimpleCaching
 
-Documentation for [SimpleCaching](https://github.com/aclai-lab/SimpleCaching.jl).
+Documentation for [SimpleCaching](https://github.com/ferdiu/SimpleCaching.jl).
 
 ```@index
 ```

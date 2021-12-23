@@ -6,11 +6,11 @@ DocMeta.setdocmeta!(SimpleCaching, :DocTestSetup, :(using SimpleCaching); recurs
 makedocs(;
     modules=[SimpleCaching],
     authors="Federico Manzella",
-    repo="https://github.com/aclai-lab/SimpleCaching.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/ferdiu/SimpleCaching.jl/blob/{commit}{path}#{line}",
     sitename="SimpleCaching.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://aclai-lab.github.io/SimpleCaching.jl",
+        canonical="https://ferdiu.github.io/SimpleCaching.jl",
         assets=String[],
     ),
     pages=[
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/aclai-lab/SimpleCaching.jl",
+    repo="github.com/ferdiu/SimpleCaching.jl",
     devbranch="main",
 )
