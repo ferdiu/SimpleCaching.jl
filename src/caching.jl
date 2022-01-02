@@ -98,8 +98,22 @@ macro _scache(type, common_cache_dir, ex)
 	common_cache_dir = esc(common_cache_dir)
 	ex = esc(ex, esc_times)
 
+	t = _convert_input(ex, true)
+
+	rel_esc(ex) = esc(ex, esc_times+1)
+	as, ks, vs = (_toexpr(t.args), _toexpr(t.kwargs)...)
+
 	return quote
-		_hash = get_hash_sha256(_convert_input($(QuoteNode(unesc(ex))) ))
+		# println($(_convert_input(ex, true, esc_times + 1)) )
+		_hash = get_hash_sha256((
+			args = $(rel_esc(as)),
+			kwargs = Dict{Symbol,Any}(
+				zip(
+					$(rel_esc(ks)),
+					$(rel_esc(vs))
+				)
+			)
+		))
 
 		if cached_obj_exists($(type), $(common_cache_dir), _hash)
 			load_cached_obj($(type), $(common_cache_dir), _hash)
@@ -131,7 +145,7 @@ macro _scache(type, common_cache_dir, ex)
 				$(common_cache_dir),
 				_result_value,
 				_hash,
-				_strarg($(QuoteNode(unesc(ex)))),
+				$(rel_esc(_strarg(ex, true))),
 				time_spent = _finish_time,
 				use_serialize = $(esc(will_use_serialize))
 			)

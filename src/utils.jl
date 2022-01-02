@@ -99,14 +99,11 @@ x = 10
 This function is called inside [`@_scache`](@ref) to generate the string that will fill the
 column `COMMAND` in the cache record (if generated).
 """
-_strarg(arg::Any) = string(arg)
-_strarg(arg::Symbol) = @eval Main $arg
-_strarg(arg::QuoteNode) = typeof(arg.value) == Symbol ? string(":$(arg.value)") : _strarg(arg.value)
-_strarg(arg::AbstractString) = arg
-function _strarg(arg::Expr)
-	if arg.head == :escape
-		return _strarg(arg.args[1])
-	elseif arg.head == :call
+_strarg(arg::Any, top_level::Bool = false) = Expr(:call, :string, arg)
+function _strarg(arg::Expr, top_level::Bool = false)
+	if top_level && arg.head == :escape
+		return _strarg(arg.args[1], true)
+	elseif top_level && arg.head == :call
 		_args = filter(x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)), arg.args[2:end])
 
 		_params = filter(x -> typeof(x) == Expr && x.head == :parameters, arg.args[2:end])
@@ -118,13 +115,21 @@ function _strarg(arg::Expr)
 			end
 		append!(_kw, filter(x -> typeof(x) == Expr && x.head == :kw, arg.args[2:end]))
 
-		return "$(arg.args[1])(" * join([@eval $a for a in _args], ", ") * "$(length(_kw) > 0 ? "; " * join(_strarg.(_kw), ", ") : ""))"
-	elseif arg.head == :kw
-		return "$(arg.args[1]) = $(_strarg(arg.args[2]))"
-	elseif arg.head == :parameters
+		# return "$(arg.args[1])(" * join([_strarg(a) for a in _args], ", ") * "$(length(_kw) > 0 ? "; " * join(_strarg.(_kw, true), ", ") : ""))"
+		return Expr(:call, :string,
+			"$(arg.args[1])(",
+			Expr(:call, :join, _toexpr(_strarg.(_args)), ", "),
+			length(_kw) > 0 ? "; " : "",
+			length(_kw) > 0 ? Expr(:call, :join, _toexpr(_strarg.(_kw, true)), ", ") : "",
+			")"
+		)
+	elseif top_level && arg.head == :kw
+		return Expr(:call, :string, "$(arg.args[1]) = ", _strarg(arg.args[2]))
+	elseif top_level && arg.head == :parameters
 		return join(_strarg.(arg.args), ", ")
 	else
-		string(@eval Main $arg)
+		Expr(:call, :string, arg)
+		# string(@eval Main $arg)
 	end
 end
 
@@ -134,20 +139,18 @@ end
 A utility function used to generate a stable Tuple containing the information that will be
 used to generate the hash of the cached file.
 
-The resulting object is a NamedTuple{(:args,:keargs),Tuple{T,D}} where T isa a ordered
+The resulting object is a NamedTuple{(:args,:kwargs),Tuple{T,D}} where T isa a ordered
 Tuple containing the arguments passed to the function called and D is a Dict{Symbol,Any}
 containing the keyword arguments passed.
 
 Note: a dictionary is used for the keyword arguments because otherwise the hash would change
 based on the their order.
 """
-_convert_input(arg::Any) = arg
-_convert_input(arg::Symbol) = @eval Main $arg
-_convert_input(arg::QuoteNode) = typeof(arg.value) == Symbol ? arg.value : _convert_input(arg.value)
-function _convert_input(arg::Expr)
-	if arg.head == :escape
-		return _convert_input(arg.args[1])
-	elseif arg.head == :call
+_convert_input(arg::Any, top_level::Bool = false) = arg
+function _convert_input(arg::Expr, top_level::Bool = false)
+	if top_level && arg.head == :escape
+		return _convert_input(arg.args[1], true)
+	elseif top_level && arg.head == :call
 		_args = filter(x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)), arg.args[2:end])
 
 		_params = filter(x -> typeof(x) == Expr && x.head == :parameters, arg.args[2:end])
@@ -159,22 +162,45 @@ function _convert_input(arg::Expr)
 			end
 		append!(_kw, filter(x -> typeof(x) == Expr && x.head == :kw, arg.args[2:end]))
 
-		return (args = [@eval $a for a in _args], kwargs = Dict{Symbol,Any}(_convert_input.(_kw)))
-	elseif arg.head == :kw
+		return (args = [_convert_input(a) for a in _args], kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)) )
+	elseif top_level && arg.head == :kw
 		return arg.args[1] => _convert_input(arg.args[2])
-	elseif arg.head == :parameters
+	elseif top_level && arg.head == :parameters
 		return _convert_input.(arg.args)
 	else
-		@eval Main $arg
+		return arg
 	end
+end
+
+## fast "toexpr" conversions
+
+_toexpr(vec::AbstractVector) = Expr(:vect, vec...)
+function _toexpr(d::AbstractDict{Symbol,Any})
+	n = length(d)
+
+	ks = Vector{Symbol}(undef, n)
+	vs = Vector{Any}(undef, n)
+
+	Threads.@threads for (i, (k, v)) in collect(enumerate(d))
+		ks[i] = k
+		vs[i] = v
+	end
+
+	_toexpr(Expr.(:quote, ks)), _toexpr(vs)
 end
 
 ## escaping utilities ##
 
 isescaped(ex::Any) = false
 isescaped(ex::Expr) = typeof(ex) == Expr && ex.head == :escape
+
+unesc(ex::Any) = ex
 unesc(ex::Expr) = ex.args[1]
+
+safeunesc(ex::Any) = ex
 safeunesc(ex::Expr) = isescaped(ex) ? unesc(ex) : ex
+
+escdepth(ex::Any) = 0
 function escdepth(ex::Expr)
 	res::Int = 0
 	curr_ex = ex
@@ -184,13 +210,16 @@ function escdepth(ex::Expr)
 	end
 	return res
 end
-function esc(ex::Expr, n::Integer)
+
+function esc(ex::Any, n::Integer)
 	res = ex
 	for i in 1:n
 		res = esc(res)
 	end
 	return res
 end
+
+unesc_comp(ex::Any) = ex
 function unesc_comp(ex::Expr)
 	res = ex
 	while (isescaped(res))
