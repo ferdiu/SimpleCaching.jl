@@ -10,7 +10,7 @@
 
 This package provides two macros used to cache result(s) of function calls.
 
-The cached file will survive the julia session so it will automatically loaded from the disk even after a restart of the julia session.
+The cached file will survive the julia session so it will be automatically loaded from the disk even after a restart of the julia session.
 
 # Usage
 
