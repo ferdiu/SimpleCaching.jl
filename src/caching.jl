@@ -31,7 +31,15 @@ function cache_obj(
 
 		if !cache_table_exists
 			write(table_file,
-				join(["TIMESTAMP", "FILE NAME", "COMP TIME", "COMMAND", "TYPE", "JULIA_VERSION", "\n"], column_separator))
+				join([
+					"TIMESTAMP",
+					"FILE NAME",
+					"COMP TIME",
+					"COMMAND",
+					"TYPE",
+					"JULIA_VERSION",
+					"\n"
+				], column_separator))
 		end
 
 		write(table_file, string(
@@ -68,7 +76,8 @@ function load_cached_obj(
 	total_load_path = joinpath(common_cache_dir, _default_jld_file_name(type, hash))
 
 	if settings.log
-		printcheckpoint(SimpleCaching.settings.log_output, "Loading $(type) from file $(total_load_path)..."; format = settings.date_format)
+		printcheckpoint(SimpleCaching.settings.log_output, "Loading $(type) from file " *
+			"$(total_load_path)..."; format = settings.date_format)
 	end
 
 	obj = nothing
@@ -80,7 +89,8 @@ function load_cached_obj(
 		try
 			obj = Serialization.deserialize(total_load_path)
 		catch e
-			throw_n_log("File $(total_load_path) is neither in JLD2 format nor a Serialized object", ArgumentError)
+			throw_n_log("File $(total_load_path) is neither in JLD2 format nor a " *
+				"Serialized object", ArgumentError)
 		end
 	end
 
@@ -93,7 +103,8 @@ macro _scache(type, common_cache_dir, ex)
 	esc_times = escdepth(ex)
 	ex = unesc_comp(ex)
 
-	(typeof(ex) != Expr || ex.head != :call) && (throw(ArgumentError("`@scache` can be used only with function calls: passed $(ex)")))
+	(typeof(ex) != Expr || ex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+		"be used only with function calls: passed $(ex)")))
 
 	# hyigene
 	type = esc(type)
@@ -106,7 +117,6 @@ macro _scache(type, common_cache_dir, ex)
 	as, ks, vs = (_toexpr(t.args), _toexpr(t.kwargs)...)
 
 	return quote
-		# println($(_convert_input(ex, true, esc_times + 1)) )
 		_hash = get_hash_sha256((
 			args = $(rel_esc(as)),
 			kwargs = Dict{Symbol,Any}(
@@ -159,8 +169,13 @@ end
 
 const _ext_docs = """!!! note
 
-	The file extension will be `.jld` when using  both [`scachefast`](@ref) and
-	[`scache`](@ref).
+	The file extension will be `.jld` when using both [`scache`](@ref) and
+	[`scachejld`](@ref).
+"""
+
+const _same_args_docs = """Expressions in function argument will be computed as first step
+so the cached file will be loaded even if the arguments are different but will evaluate to
+the same result.
 """
 
 """
@@ -169,9 +184,9 @@ const _ext_docs = """!!! note
 Cache the result of `function_call` in directory `cache_dir` prefixing the saved file with
 `type`.
 
-This macro uses `JLD2` `@save` and `@load` macros to save and load cached files so it is
-slower and less memory efficent than [`scachefast`](@ref) macro which uses `serialize`
-which, on the other hand, is less portable between different julia versions.
+This macro uses `Serialize` `serialize` and `deserialize` functions to save and load cached
+files so it is faster and more memory efficent than [`scachejld`](@ref) macro which uses
+`JLD2` which, on the other hand, is more portable between different julia versions.
 
 $_ext_docs
 
@@ -224,8 +239,7 @@ julia> @scache "cute-cube" "./" fill(0, 3, 3, 3)
  -rw-r--r--. 1 user user 1000 31 dic 09.54 cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld
 ```
 
-Expressions in function argument will be computed as first step so the cached file will be
-loaded even if the arguments are different but will evaluate to the same result.
+$_same_args_docs
 
 ```
 julia> @scache "cute-cube" "./" fill(0, 3, parse(Int64, "3"), 3)
@@ -249,20 +263,21 @@ julia> @scache "cute-cube" "./" fill(0, 3, parse(Int64, "3"), 3)
 ```
 """
 macro scache(type, common_cache_dir, ex)
-	global _use_serialize = false
+	global _use_serialize = true
 
 	:(@_scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex)))
 end
 
+
 """
-	scachefast(type, cache_dir, function_call)
+	scachejld(type, cache_dir, function_call)
 
 Cache the result of `function_call` in directory `cache_dir` prefixing the saved file with
 `type`.
 
-This macro uses `Serialize` `serialize` and `deserialize` functions to save and load cached
-files so it is faster and more memory efficent than [`scache`](@ref) macro which uses
-`JLD2` which, on the other hand, is more portable between different julia versions.
+This macro uses `JLD2` `@save` and `@load` macros to save and load cached files so it is
+slower and less memory efficent than [`scache`](@ref) macro which uses `serialize`
+which, on the other hand, is less portable between different julia versions.
 
 $_ext_docs
 
@@ -273,7 +288,7 @@ julia> using SimpleCaching
 julia> SimpleCaching.settings.log = true
 true
 
-julia> @scachefast "cute-cube" "./" fill(0, 3, 3, 3)
+julia> @scachejld "cute-cube" "./" fill(0, 3, 3, 3)
 ● [ 31/12/2021 10:31:15 ] Computing cute-cube...
 ● [ 31/12/2021 10:31:15 ] Computed cute-cube in 0.042 seconds (00:00:00)
 ● [ 31/12/2021 10:31:19 ] Saving cute-cube to file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld[.tmp]...
@@ -293,7 +308,7 @@ julia> @scachefast "cute-cube" "./" fill(0, 3, 3, 3)
  0  0  0
  0  0  0
 
-julia> @scachefast "cute-cube" "./" fill(0, 3, 3, 3)
+julia> @scachejld "cute-cube" "./" fill(0, 3, 3, 3)
 ● [ 31/12/2021 10:31:23 ] Loading cute-cube from file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld...
 3×3×3 Array{Int64, 3}:
 [:, :, 1] =
@@ -313,11 +328,10 @@ julia> @scachefast "cute-cube" "./" fill(0, 3, 3, 3)
 
 ```
 
-Expressions in function argument will be computed as first step so the cached file will be
-loaded even if the arguments are different but will evaluate to the same result.
+$_same_args_docs
 
 ```
-julia> @scachefast "cute-cube" "./" fill(0, 3, round(Int64, 1.5 * 2), 3)
+julia> @scachejld "cute-cube" "./" fill(0, 3, round(Int64, 1.5 * 2), 3)
 ● [ 31/12/2021 10:32:06 ] Loading cute-cube from file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld...
 3×3×3 Array{Int64, 3}:
 [:, :, 1] =
@@ -337,8 +351,8 @@ julia> @scachefast "cute-cube" "./" fill(0, 3, round(Int64, 1.5 * 2), 3)
 
 ```
 """
-macro scachefast(type, common_cache_dir, ex)
-	global _use_serialize = true
+macro scachejld(type, common_cache_dir, ex)
+	global _use_serialize = false
 
 	:(@_scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex)))
 end

@@ -28,11 +28,11 @@ end
     @test res3 == res
     @test res4 == res
 
-    # test @scachefast
-    res1 = @scachefast cached_type testing_cache_dir fill(0.0, 20, 20, 20)
-    res2 = @scachefast cached_type testing_cache_dir fill(0.0, 20, 20, 20)
-    res3 = @scachefast cached_type testing_cache_dir fill(Float64(1 - 1), 20, 20, 20)
-    res4 = @scachefast cached_type testing_cache_dir fill(res3[1,1,1], 20, 20, 20)
+    # test @scachejld
+    res1 = @scachejld cached_type testing_cache_dir fill(0.0, 20, 20, 20)
+    res2 = @scachejld cached_type testing_cache_dir fill(0.0, 20, 20, 20)
+    res3 = @scachejld cached_type testing_cache_dir fill(Float64(1 - 1), 20, 20, 20)
+    res4 = @scachejld cached_type testing_cache_dir fill(res3[1,1,1], 20, 20, 20)
 
     res = fill(0.0, 20, 20, 20)
 
