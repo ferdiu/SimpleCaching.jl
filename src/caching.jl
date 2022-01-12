@@ -31,7 +31,7 @@ function cache_obj(
 
 		if !cache_table_exists
 			write(table_file,
-				join(["TIMESTAMP", "FILE NAME", "COMP TIME", "COMMAND", "\n"], column_separator))
+				join(["TIMESTAMP", "FILE NAME", "COMP TIME", "COMMAND", "TYPE", "JULIA_VERSION", "\n"], column_separator))
 		end
 
 		write(table_file, string(
@@ -39,6 +39,8 @@ function cache_obj(
 				_default_jld_file_name(type, hash), column_separator,
 				human_readable_time(time_spent), column_separator,
 				args_string, column_separator,
+				typeof(obj), column_separator,
+				VERSION, column_separator,
 				"\n"))
 		close(table_file)
 	end
