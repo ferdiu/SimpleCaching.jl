@@ -1,7 +1,7 @@
 name = "SimpleCaching"
 uuid = "71e1c77a-176e-49fd-a90f-f84a4a948e95"
 authors = ["Federico MANZELLA"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"

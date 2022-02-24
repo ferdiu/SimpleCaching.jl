@@ -9,6 +9,7 @@ import Base: esc
 
 # export caching macros
 export @scache, @scachejld
+export @scache_if, @scachejld_if
 
 # export deprecated macros
 export @scachefast

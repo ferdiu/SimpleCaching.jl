@@ -356,3 +356,181 @@ macro scachejld(type, common_cache_dir, ex)
 
 	:(@_scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex)))
 end
+
+"""
+	scache_if(condition, type, cache_dir, function_call)
+
+Cache the result of `function_call` only if `condition` is `true`.
+
+Note that will not be loaded the cached result even if present.
+
+For other parameters docs see [`scache_if`](@ref).
+
+## Examples
+```
+julia> using SimpleCaching
+
+julia> SimpleCaching.settings.log = true
+true
+
+julia> @scache_if true "cute-cube" "./" fill(0, 3, 3, 3)
+● [ 31/12/2021 09:54:08 ] Computing cute-cube...
+● [ 31/12/2021 09:54:08 ] Computed cute-cube in 0.044 seconds (00:00:00)
+● [ 31/12/2021 09:54:13 ] Saving cute-cube to file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld[.tmp]...
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+julia> @scache_if true "cute-cube" "./" fill(0, 3, 3, 3)
+● [ 31/12/2021 09:54:24 ] Loading cute-cube from file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld...
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+ shell> ls -lh cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld
+ -rw-r--r--. 1 user user 1000 31 dic 09.54 cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld
+```
+
+but passing a `false` `condition` (note there is no loading log):
+
+```
+julia> @scache_if true "cute-cube" "./" fill(0, 3, 3, 3)
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+ ```
+"""
+macro scache_if(condition, type, common_cache_dir, ex)
+	return quote
+		if $(esc(condition))
+			@scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex))
+		else
+			$(esc(ex))
+		end
+	end
+end
+
+"""
+	scachejld_if(condition, type, cache_dir, function_call)
+
+Cache the result of `function_call` only if `condition` is `true`.
+
+Note that will not be loaded the cached result even if present.
+
+For other parameters docs see [`scachejld`](@ref).
+
+## Examples
+```
+julia> using SimpleCaching
+
+julia> SimpleCaching.settings.log = true
+true
+
+julia> @scachejld_if true "cute-cube" "./" fill(0, 3, 3, 3)
+● [ 31/12/2021 09:54:08 ] Computing cute-cube...
+● [ 31/12/2021 09:54:08 ] Computed cute-cube in 0.044 seconds (00:00:00)
+● [ 31/12/2021 09:54:13 ] Saving cute-cube to file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld[.tmp]...
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+julia> @scachejld_if true "cute-cube" "./" fill(0, 3, 3, 3)
+● [ 31/12/2021 09:54:24 ] Loading cute-cube from file ./cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld...
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+ shell> ls -lh cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld
+ -rw-r--r--. 1 user user 1000 31 dic 09.54 cute-cube_8ad46882688c6820fc0b59db89cfe7f6ca494e3045d7ece8acba1027c4c03c45.jld
+```
+
+but passing a `false` `condition` (note there is no loading log):
+
+```
+julia> @scachejld_if true "cute-cube" "./" fill(0, 3, 3, 3)
+3×3×3 Array{Int64, 3}:
+[:, :, 1] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 2] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+
+[:, :, 3] =
+ 0  0  0
+ 0  0  0
+ 0  0  0
+ ```
+"""
+macro scachejld_if(condition, type, common_cache_dir, ex)
+	return quote
+		if $(esc(condition))
+			@scachejld $(esc(type)) $(esc(common_cache_dir)) $(esc(ex))
+		else
+			$(esc(ex))
+		end
+	end
+end
