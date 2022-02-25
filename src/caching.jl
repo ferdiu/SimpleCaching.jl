@@ -114,15 +114,21 @@ macro _scache(type, common_cache_dir, ex)
 	t = _convert_input(ex, true)
 
 	rel_esc(ex) = esc(ex, esc_times+1)
-	as, ks, vs = (_toexpr(t.args), _toexpr(t.kwargs)...)
+	as, ks, vs, res = (_toexpr(t.args), _toexpr(t.kwargs)..., t.res)
 
+	# TODO: make a function that interprets `res` to be inserted in `args` or `kwargs`
 	return quote
 		_hash = get_hash_sha256((
 			args = $(rel_esc(as)),
-			kwargs = Dict{Symbol,Any}(
-				zip(
-					$(rel_esc(ks)),
-					$(rel_esc(vs))
+			kwargs = merge(
+				Dict{Symbol,Any}(
+					zip(
+						$(rel_esc(ks)),
+						$(rel_esc(vs))
+					)
+				),
+				Dict{Symbol,Any}(
+					pairs($(rel_esc(res)))
 				)
 			)
 		))

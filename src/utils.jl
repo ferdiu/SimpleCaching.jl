@@ -115,7 +115,6 @@ function _strarg(arg::Expr, top_level::Bool = false)
 			end
 		append!(_kw, filter(x -> typeof(x) == Expr && x.head == :kw, arg.args[2:end]))
 
-		# return "$(arg.args[1])(" * join([_strarg(a) for a in _args], ", ") * "$(length(_kw) > 0 ? "; " * join(_strarg.(_kw, true), ", ") : ""))"
 		return Expr(:call, :string,
 			"$(arg.args[1])(",
 			Expr(:call, :join, _toexpr(_strarg.(_args)), ", "),
@@ -127,10 +126,17 @@ function _strarg(arg::Expr, top_level::Bool = false)
 		return Expr(:call, :string, "$(arg.args[1]) = ", _strarg(arg.args[2]))
 	elseif top_level && arg.head == :parameters
 		return join(_strarg.(arg.args), ", ")
+	elseif top_level && arg.head == :...
+		return _rem(_rem(_rem(_strarg(arg.args[1]), "^\\("), "\\)\$"), ",\$")
+	elseif arg.head == :...
+		return _strarg(Expr(:call, :join, Expr(:..., _toexpr(arg.args)), ", "))
 	else
 		Expr(:call, :string, arg)
-		# string(@eval Main $arg)
 	end
+end
+
+function _rem(s, reg::AbstractString)
+	return Expr(:call, :replace, _strarg(s), Expr(:call, :(=>), Expr(:call, :Regex, reg), ""))
 end
 
 """
@@ -139,7 +145,7 @@ end
 A utility function used to generate a stable Tuple containing the information that will be
 used to generate the hash of the cached file.
 
-The resulting object is a NamedTuple{(:args,:kwargs),Tuple{T,D}} where T isa a ordered
+The resulting object is a NamedTuple{(:args,:kwargs),Tuple{T,D}} where T is a ordered
 Tuple containing the arguments passed to the function called and D is a Dict{Symbol,Any}
 containing the keyword arguments passed.
 
@@ -148,6 +154,9 @@ based on the their order.
 """
 _convert_input(arg::Any, top_level::Bool = false) = arg
 function _convert_input(arg::Expr, top_level::Bool = false)
+	_splat2pairs(v::AbstractVector) = length(v) == 0 ? [] : _splat2pairs(v[1])
+	_splat2pairs(ex::Expr) = Expr(:call, :pairs, ex.args[1])
+
 	if top_level && arg.head == :escape
 		return _convert_input(arg.args[1], true)
 	elseif top_level && arg.head == :call
@@ -162,7 +171,10 @@ function _convert_input(arg::Expr, top_level::Bool = false)
 			end
 		append!(_kw, filter(x -> typeof(x) == Expr && x.head == :kw, arg.args[2:end]))
 
-		return (args = [_convert_input(a) for a in _args], kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)) )
+		_res = filter(x -> typeof(x) == Expr && x.head == :..., _kw)
+		_kw = filter(x -> !(typeof(x) == Expr && x.head == :...), _kw)
+
+		return (args = [_convert_input(a, true) for a in _args], kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)...), res = _splat2pairs(_res) )
 	elseif top_level && arg.head == :kw
 		return arg.args[1] => _convert_input(arg.args[2])
 	elseif top_level && arg.head == :parameters
