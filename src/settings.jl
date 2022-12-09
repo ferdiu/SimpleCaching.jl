@@ -10,7 +10,7 @@ loading. Default is `false`.
 - `log_output`: a IO containing the file descriptor the log will be written to; ignored if
 `log` is `false`. Default is `stdout`.
 - `date_format`: a String representing the format the DateTime will be printed when logging;
-ignored if `log` is `false`. Default is `"dd/mm/yyyy HH:MM:SS"`.
+ignored if `log` is `false`. Default is `"yyyy-mm-dd HH:MM:SS"`.
 - `line_started`: a String that will be placed at the beginning of the log; ignored if `log`
 is `false`. Default is `"● "`.
 - `create_cache_record`: a Bool indicating whether to create a tsv file containing human
@@ -24,7 +24,7 @@ mutable struct SimpleCachingSettings
     create_cache_record::Bool
 end
 
-const settings = SimpleCachingSettings(false, stdout, "dd/mm/yyyy HH:MM:SS", "● ", true)
+const settings = SimpleCachingSettings(false, stdout, "yyyy-mm-dd HH:MM:SS", "● ", true)
 
 _use_serialize = false
 
