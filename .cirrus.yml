@@ -5,7 +5,7 @@ task:
         image: freebsd-12-0-release-amd64
     - name: Linux
       container:
-        image: fedora:latest
+        image: ubuntu:latest
   artifacts_cache:
     folder: ~/.julia/artifacts
   env:
@@ -13,15 +13,8 @@ task:
     JULIA_VERSION: 1.8
     JULIA_VERSION: nightly
   allow_failures: $JULIA_VERSION == 'nightly'
-  install_script: |
-    URL="https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh"
-    if command -v curl; then
-        sh -c "$(curl ${URL})"
-    elif command -v wget; then
-        sh -c "$(wget ${URL} -q -O-)"
-    elif command -v fetch; then
-        sh -c "$(fetch ${URL} -o -)"
-    fi
+  install_script:
+    - sh -c "$(fetch https://raw.githubusercontent.com/ararslan/CirrusCI.jl/master/bin/install.sh -o -)"
   build_script:
     - cirrusjl build
   test_script:
