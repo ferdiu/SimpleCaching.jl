@@ -14,7 +14,7 @@ ignored if `log` is `false`. Default is `"yyyy-mm-dd HH:MM:SS"`.
 - `line_started`: a String that will be placed at the beginning of the log; ignored if `log`
 is `false`. Default is `"● "`.
 - `create_cache_record`: a Bool indicating whether to create a tsv file containing human
-readable informations about the saved file. Default is `true`.
+readable informations about the saved file. Default is `false`.
 """
 mutable struct SimpleCachingSettings
     log::Bool
@@ -24,7 +24,7 @@ mutable struct SimpleCachingSettings
     create_cache_record::Bool
 end
 
-const settings = SimpleCachingSettings(false, stdout, "yyyy-mm-dd HH:MM:SS", "● ", true)
+const settings = SimpleCachingSettings(false, stdout, "yyyy-mm-dd HH:MM:SS", "● ", false)
 
 _use_serialize = false
 
