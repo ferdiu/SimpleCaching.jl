@@ -10,7 +10,7 @@ module A
     export heavy_computation
 
     function heavy_computation(cached_type, testing_cache_dir, x, s::Integer...)
-        return @scachefast cached_type testing_cache_dir fill(x, s...)
+        return @scache cached_type testing_cache_dir fill(x, s...)
     end
 end
 
