@@ -34,7 +34,7 @@ Print `any...` to `io` and flush preceeded by the current DateTime in `format`.
 
 A line starter can be specified by the keyword argument `start`. Default is "● ".
 """
-function printcheckpoint(
+@inline function printcheckpoint(
 	io::IO, string::AbstractString...;
 	format = "dd/mm/yyyy HH:MM:SS",
 	start = "● "
@@ -42,9 +42,15 @@ function printcheckpoint(
 	println(io, start, Dates.format(now(), "[ $(format) ] "), string...)
 	flush(io)
 end
-printcheckpoint(string::AbstractString...; kwargs...) = printcheckpoint(stdout, string...; kwargs...)
-printcheckpoint(io::IO, any::Any...; kwargs...) = printcheckpoint(io, string(any...); kwargs...)
-printcheckpoint(any::Any...; kwargs...) = printcheckpoint(stdout, any...; kwargs...)
+@inline function printcheckpoint(string::AbstractString...; kwargs...)
+	return printcheckpoint(stdout, string...; kwargs...)
+end
+@inline function printcheckpoint(io::IO, any::Any...; kwargs...)
+	return printcheckpoint(io, string(any...); kwargs...)
+end
+@inline function printcheckpoint(any::Any...; kwargs...)
+	return printcheckpoint(stdout, any...; kwargs...)
+end
 
 """
 	human_readable_time(milliseconds)
@@ -89,22 +95,25 @@ A utility function used to generate a String representing the final Expr that wi
 the cached file to be loaded.
 This means that the following calls will produce the same strings:
 
-```
+```julia
 x = 10
 @scache "my-cute-vector" "./" fill(0, 10)
 @scache "my-cute-vector" "./" fill(0, x)
 @scache "my-cute-vector" "./" fill(0, 5 + 5)
 ```
 
-This function is called inside [`@_scache`](@ref) to generate the string that will fill the
-column `COMMAND` in the cache record (if generated).
+This function is called inside [`@_scache`](@ref SimpleCaching.@_scache) to generate the
+string that will fill the column `COMMAND` in the cache record (if generated).
 """
 _strarg(arg::Any, top_level::Bool = false) = Expr(:call, :string, arg)
 function _strarg(arg::Expr, top_level::Bool = false)
 	if top_level && arg.head == :escape
 		return _strarg(arg.args[1], true)
 	elseif top_level && arg.head == :call
-		_args = filter(x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)), arg.args[2:end])
+		_args = filter(
+			x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)),
+			arg.args[2:end]
+		)
 
 		_params = filter(x -> typeof(x) == Expr && x.head == :parameters, arg.args[2:end])
 		_kw =
@@ -160,7 +169,10 @@ function _convert_input(arg::Expr, top_level::Bool = false)
 	if top_level && arg.head == :escape
 		return _convert_input(arg.args[1], true)
 	elseif top_level && arg.head == :call
-		_args = filter(x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)), arg.args[2:end])
+		_args = filter(
+			x -> !(typeof(x) == Expr && (x.head == :parameters || x.head == :kw)),
+			arg.args[2:end]
+		)
 
 		_params = filter(x -> typeof(x) == Expr && x.head == :parameters, arg.args[2:end])
 		_kw =
@@ -174,7 +186,11 @@ function _convert_input(arg::Expr, top_level::Bool = false)
 		_res = filter(x -> typeof(x) == Expr && x.head == :..., _kw)
 		_kw = filter(x -> !(typeof(x) == Expr && x.head == :...), _kw)
 
-		return (args = [_convert_input(a, true) for a in _args], kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)...), res = _splat2pairs(_res) )
+		return (
+			args = [_convert_input(a, false) for a in _args],
+			kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)...),
+			res = _splat2pairs(_res)
+		)
 	elseif top_level && arg.head == :kw
 		return arg.args[1] => _convert_input(arg.args[2])
 	elseif top_level && arg.head == :parameters

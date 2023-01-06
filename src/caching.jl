@@ -1,6 +1,8 @@
 
-_default_table_file_name(type::AbstractString) = "$(type)_cached.tsv"
-_default_jld_file_name(type::AbstractString, hash::AbstractString) = string("$(type)_$(hash).jld")
+@inline _default_table_file_name(type::AbstractString) = "$(type)_cached.tsv"
+@inline function _default_jld_file_name(type::AbstractString, hash::AbstractString)
+	return string("$(type)_$(hash).jld")
+end
 
 function cached_obj_exists(
 	type::AbstractString, common_cache_dir::AbstractString, hash::AbstractString
@@ -97,6 +99,15 @@ function load_cached_obj(
 	obj
 end
 
+"""
+	_scache(type, common_cache_dir, ex)
+
+This is the macro used by all the other macros exported by `SimpleCaching` package.
+
+!!! note
+
+	Never use this macro: use [`@scache`](@ref) and [`@scachejld`](@ref) instead.
+"""
 macro _scache(type, common_cache_dir, ex)
 	will_use_serialize = _use_serialize
 
@@ -175,8 +186,8 @@ end
 
 const _ext_docs = """!!! note
 
-	The file extension will be `.jld` when using both [`scache`](@ref) and
-	[`scachejld`](@ref).
+	The file extension will be `.jld` when using both [`@scache`](@ref) and
+	[`@scachejld`](@ref).
 """
 
 const _same_args_docs = """Expressions in function argument will be computed as first step
@@ -191,13 +202,13 @@ Cache the result of `function_call` in directory `cache_dir` prefixing the saved
 `type`.
 
 This macro uses `Serialize` `serialize` and `deserialize` functions to save and load cached
-files so it is faster and more memory efficent than [`scachejld`](@ref) macro which uses
+files so it is faster and more memory efficent than [`@scachejld`](@ref) macro which uses
 `JLD2` which, on the other hand, is more portable between different julia versions.
 
 $_ext_docs
 
 ## Examples
-```
+```julia-repl
 julia> using SimpleCaching
 
 julia> SimpleCaching.settings.log = true;
@@ -247,7 +258,7 @@ shell> ls -l cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885a
 
 $_same_args_docs
 
-```
+```julia-repl
 julia> @scache "cute-cube" "./" fill(0, 3, parse(Int, "3"), 3)
 ● [ 2022-12-09 09:41:54 ] Loading cute-cube from file ./cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885a8b7bd6a.jld...
 3×3×3 Array{Int64, 3}:
@@ -282,13 +293,13 @@ Cache the result of `function_call` in directory `cache_dir` prefixing the saved
 `type`.
 
 This macro uses `JLD2` `@save` and `@load` macros to save and load cached files so it is
-slower and less memory efficent than [`scache`](@ref) macro which uses `serialize`
+slower and less memory efficent than [`@scache`](@ref) macro which uses `serialize`
 which, on the other hand, is less portable between different julia versions.
 
 $_ext_docs
 
 ## Examples
-```
+```julia-repl
 julia> using SimpleCaching
 
 julia> SimpleCaching.settings.log = true;
@@ -338,7 +349,7 @@ shell> ls -l cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885a
 
 $_same_args_docs
 
-```
+```julia-repl
 julia> @scachejld "cute-cube" "./" fill(0, 3, round(Int64, 1.5 * 2), 3)
 ● [ 2022-12-09 15:59:13 ] Loading cute-cube from file ./cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885a8b7bd6a.jld...
 3×3×3 Array{Int64, 3}:
@@ -372,10 +383,10 @@ Cache the result of `function_call` only if `condition` is `true`.
 
 Note that will not be loaded the cached result even if present.
 
-For other parameters docs see [`scache_if`](@ref).
+For other parameters docs see [`@scache_if`](@ref).
 
 ## Examples
-```
+```julia-repl
 julia> using SimpleCaching
 
 julia> SimpleCaching.settings.log = true;
@@ -425,7 +436,7 @@ shell> ls -lh cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885
 
 but passing a `false` `condition` (note there is no loading log):
 
-```
+```julia-repl
 julia> @scache_if false "cute-cube" "./" fill(0, 3, 3, 3)
 3×3×3 Array{Int64, 3}:
 [:, :, 1] =
@@ -462,10 +473,10 @@ Cache the result of `function_call` only if `condition` is `true`.
 
 Note that will not be loaded the cached result even if present.
 
-For other parameters docs see [`scachejld`](@ref).
+For other parameters docs see [`@scachejld`](@ref).
 
 ## Examples
-```
+```julia-repl
 julia> using SimpleCaching
 
 julia> SimpleCaching.settings.log = true;
@@ -515,7 +526,7 @@ shell> ls -lh cute-cube_4bbf9c2851f2c2b3954448f1a8085f6e3d40085add71f19640343885
 
 but passing a `false` `condition` (note there is no loading log):
 
-```
+```julia-repl
 julia> @scachejld_if false "cute-cube" "./" fill(0, 3, 3, 3)
 3×3×3 Array{Int64, 3}:
 [:, :, 1] =

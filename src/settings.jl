@@ -6,15 +6,15 @@ SimpleCachingSettings is a struct containing settings for exported macros `@scac
 ## Fields
 
 - `log`: a Bool indicating whether to log or not operations like computing, saving and
-loading. Default is `false`.
+    loading. Default is `false`.
 - `log_output`: a IO containing the file descriptor the log will be written to; ignored if
-`log` is `false`. Default is `stdout`.
+    `log` is `false`. Default is `stdout`.
 - `date_format`: a String representing the format the DateTime will be printed when logging;
-ignored if `log` is `false`. Default is `"yyyy-mm-dd HH:MM:SS"`.
+    ignored if `log` is `false`. Default is `"yyyy-mm-dd HH:MM:SS"`.
 - `line_started`: a String that will be placed at the beginning of the log; ignored if `log`
-is `false`. Default is `"● "`.
+    is `false`. Default is `"● "`.
 - `create_cache_record`: a Bool indicating whether to create a tsv file containing human
-readable informations about the saved file. Default is `false`.
+    readable informations about the saved file. Default is `false`.
 """
 mutable struct SimpleCachingSettings
     log::Bool
