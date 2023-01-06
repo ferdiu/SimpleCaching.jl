@@ -383,7 +383,7 @@ Cache the result of `function_call` only if `condition` is `true`.
 
 Note that will not be loaded the cached result even if present.
 
-For other parameters docs see [`@scache_if`](@ref).
+For other parameters docs see [`@scache`](@ref).
 
 ## Examples
 ```julia-repl
