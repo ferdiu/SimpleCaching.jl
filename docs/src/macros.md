@@ -7,7 +7,7 @@ CurrentModule = SimpleCaching
 All the macros can be described as one:
 
 ```julia
-@scache[jld][_if condition] type cache_dir function_call
+@scache[jld][_if condition] [[type] cache_dir] function_call
 ```
 
 when `jld` is specified right after `@scache` then `JLD2` will be used instead of
