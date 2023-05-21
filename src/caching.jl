@@ -195,8 +195,19 @@ so the cached file will be loaded even if the arguments are different but will e
 the same result.
 """
 
+const _type_docs = """!!! note
+
+    If `type` is omitted the function name will be used as `type`.
 """
-	scache(type, cache_dir, function_call)
+
+const _cache_dir_docs = """!!! note
+
+    If `cache_dir` is omitted the value set in filed `cache_dir` in
+    [`SimpleCachingSettings`](@ref) will be used.
+"""
+
+"""
+	@scache [[type] cache_dir] function_call
 
 Cache the result of `function_call` in directory `cache_dir` prefixing the saved file with
 `type`.
@@ -206,6 +217,10 @@ files so it is faster and more memory efficent than [`@scachejld`](@ref) macro w
 `JLD2` which, on the other hand, is more portable between different julia versions.
 
 $_ext_docs
+
+$_type_docs
+
+$_cache_dir_docs
 
 ## Examples
 ```julia-repl
@@ -284,10 +299,21 @@ macro scache(type, common_cache_dir, ex)
 
 	:(@_scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex)))
 end
+macro scache(common_cache_dir, ex)
+	uex = unesc_comp(ex)
+
+	(typeof(uex) != Expr || uex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+		"be used only with function calls: passed $(uex)")))
+
+	:(@scache $(esc(string(uex.args[1]))) $(esc(common_cache_dir)) $(esc(ex)))
+end
+macro scache(ex)
+	:(@scache $(esc(settings.cache_dir)) $(esc(ex)))
+end
 
 
 """
-	scachejld(type, cache_dir, function_call)
+	@scachejld [[type] cache_dir] function_call
 
 Cache the result of `function_call` in directory `cache_dir` prefixing the saved file with
 `type`.
@@ -297,6 +323,10 @@ slower and less memory efficent than [`@scache`](@ref) macro which uses `seriali
 which, on the other hand, is less portable between different julia versions.
 
 $_ext_docs
+
+$_type_docs
+
+$_cache_dir_docs
 
 ## Examples
 ```julia-repl
@@ -375,9 +405,20 @@ macro scachejld(type, common_cache_dir, ex)
 
 	:(@_scache $(esc(type)) $(esc(common_cache_dir)) $(esc(ex)))
 end
+macro scachejld(common_cache_dir, ex)
+    uex = unesc_comp(ex)
+
+    (typeof(uex) != Expr || uex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+        "be used only with function calls: passed $(uex)")))
+
+    :(@scachejld $(esc(string(uex.args[1]))) $(esc(common_cache_dir)) $(esc(ex)))
+end
+macro scachejld(ex)
+    :(@scachejld $(esc(settings.cache_dir)) $(esc(ex)))
+end
 
 """
-	scache_if(condition, type, cache_dir, function_call)
+	@scache_if condition [[type] cache_dir] function_call
 
 Cache the result of `function_call` only if `condition` is `true`.
 
@@ -465,9 +506,20 @@ macro scache_if(condition, type, common_cache_dir, ex)
 		end
 	end
 end
+macro scache_if(condition, common_cache_dir, ex)
+    uex = unesc_comp(ex)
+
+    (typeof(uex) != Expr || uex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+        "be used only with function calls: passed $(uex)")))
+
+    :(@scache_if $(esc(condition)) $(esc(string(uex.args[1]))) $(esc(common_cache_dir)) $(esc(ex)))
+end
+macro scache_if(condition, ex)
+    :(@scache_if $(esc(condition)) $(esc(settings.cache_dir)) $(esc(ex)))
+end
 
 """
-	scachejld_if(condition, type, cache_dir, function_call)
+	@scachejld_if condition [[type] cache_dir] function_call
 
 Cache the result of `function_call` only if `condition` is `true`.
 
@@ -554,4 +606,15 @@ macro scachejld_if(condition, type, common_cache_dir, ex)
 			$(esc(ex))
 		end
 	end
+end
+macro scachejld_if(condition, common_cache_dir, ex)
+    uex = unesc_comp(ex)
+
+    (typeof(uex) != Expr || uex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+        "be used only with function calls: passed $(uex)")))
+
+    :(@scachejld_if $(esc(condition)) $(esc(string(uex.args[1]))) $(esc(common_cache_dir)) $(esc(ex)))
+end
+macro scachejld_if(condition, ex)
+    :(@scachejld_if $(esc(condition)) $(esc(settings.cache_dir)) $(esc(ex)))
 end

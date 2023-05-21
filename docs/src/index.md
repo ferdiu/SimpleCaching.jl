@@ -23,12 +23,12 @@ the result can be loaded from the cache, if any.
 
 ## Installation
 
-Currently this packages is still not registered so you need to execute the following
-commands in a Julia REPL to install it:
+This packages is registered so you can install it by executing the following commands in a
+Julia REPL:
 
 ```julia
 import Pkg
-Pkg.add("https://github.com/ferdiu/SimpleCaching.jl")
+Pkg.add("SimpleCaching")
 ```
 
 or, to install the developement version, run:
