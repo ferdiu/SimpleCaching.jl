@@ -4,6 +4,9 @@ using Test
 const testing_cache_dir = mktempdir(prefix = "SimpleCaching_test_")
 const cached_type = "testing_object"
 
+const mat1 = [1 0; 0 1]
+const mat2 = [1 1; 0 1]
+
 module A
     using SimpleCaching
 
@@ -42,6 +45,16 @@ end
     @test res3 == res
     @test res4 == res
 
+    # test broadcasting
+    res1_normal = mat1 * mat2
+    res2_normal = mat1 .* mat2
+    res1_cache =  @scache mat1 * mat2
+    res2_cache =  @scache mat1 .* mat2
+
+    @test res1_normal == res1_cache
+    @test res2_normal == res2_cache
+
+    # clean
     rm(testing_cache_dir; recursive = true)
 
     @testset "no type" begin
