@@ -86,6 +86,43 @@ function throw_n_log(msg::AbstractString; error_type::Type{<:Exception} = ErrorE
 	throw(error_type(msg))
 end
 
+"""
+	_is_call_expr(expression)
+
+Return whether an expression is a function call or not.
+"""
+_is_call_expr(::Any) = false
+_is_call_expr(ex::Expr) = ex.head == :call
+
+"""
+	_is_bc_expr(expression)
+
+Return whether an expression is a broadcast or not.
+"""
+_is_bc_expr(::Any) = false
+_is_bc_expr(ex::Expr) = ex.head == :.
+
+"""
+	_bc2call(expression)
+
+Convert a broadcast expression to a simple call expression.
+"""
+_bc2call(ex::Any) = ex
+function _bc2call(ex::Expr)
+	if !_is_bc_expr(ex)
+		return ex
+	end
+
+	@assert typeof(ex.args[2]) == Expr && ex.args[2].head == :tuple "Found unusual " *
+		"broadcast expression: $(dump(ex))"
+
+	res = deepcopy(ex)
+	res.head = :call
+	res.args = res.args[2].args
+
+	return res
+end
+
 ## conversion utilities ##
 
 """
@@ -105,8 +142,8 @@ x = 10
 This function is called inside [`@_scache`](@ref SimpleCaching.@_scache) to generate the
 string that will fill the column `COMMAND` in the cache record (if generated).
 """
-_strarg(arg::Any, top_level::Bool = false) = Expr(:call, :string, arg)
-function _strarg(arg::Expr, top_level::Bool = false)
+_strarg(arg::Any, top_level::Bool = false, broadcast::Bool = false) = Expr(:call, :string, arg)
+function _strarg(arg::Expr, top_level::Bool = false, broadcast::Bool = false)
 	if top_level && arg.head == :escape
 		return _strarg(arg.args[1], true)
 	elseif top_level && arg.head == :call
@@ -125,12 +162,16 @@ function _strarg(arg::Expr, top_level::Bool = false)
 		append!(_kw, filter(x -> typeof(x) == Expr && x.head == :kw, arg.args[2:end]))
 
 		return Expr(:call, :string,
-			"$(arg.args[1])(",
+			"$(arg.args[1])",
+			broadcast ? "." : "",
+			"(",
 			Expr(:call, :join, _toexpr(_strarg.(_args)), ", "),
 			length(_kw) > 0 ? "; " : "",
 			length(_kw) > 0 ? Expr(:call, :join, _toexpr(_strarg.(_kw, true)), ", ") : "",
 			")"
 		)
+	elseif top_level && arg.head == :.
+		return _strarg(_bc2call(arg), top_level, true)
 	elseif top_level && arg.head == :kw
 		return Expr(:call, :string, "$(arg.args[1]) = ", _strarg(arg.args[2]))
 	elseif top_level && arg.head == :parameters
@@ -161,8 +202,8 @@ containing the keyword arguments passed.
 Note: a dictionary is used for the keyword arguments because otherwise the hash would change
 based on the their order.
 """
-_convert_input(arg::Any, top_level::Bool = false) = arg
-function _convert_input(arg::Expr, top_level::Bool = false)
+_convert_input(arg::Any, top_level::Bool = false, broadcast::Bool = false) = arg
+function _convert_input(arg::Expr, top_level::Bool = false, broadcast::Bool = false)
 	_splat2pairs(v::AbstractVector) = length(v) == 0 ? [] : _splat2pairs(v[1])
 	_splat2pairs(ex::Expr) = Expr(:call, :pairs, ex.args[1])
 
@@ -189,8 +230,11 @@ function _convert_input(arg::Expr, top_level::Bool = false)
 		return (
 			args = [_convert_input(a, false) for a in _args],
 			kwargs = Dict{Symbol,Any}(_convert_input.(_kw, true)...),
-			res = _splat2pairs(_res)
+			res = _splat2pairs(_res),
+			broadcast = broadcast
 		)
+	elseif top_level && arg.head == :.
+		return _convert_input(_bc2call(arg), top_level, true)
 	elseif top_level && arg.head == :kw
 		return arg.args[1] => _convert_input(arg.args[2])
 	elseif top_level && arg.head == :parameters

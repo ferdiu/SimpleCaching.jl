@@ -114,7 +114,7 @@ macro _scache(type, common_cache_dir, ex)
 	esc_times = escdepth(ex)
 	ex = unesc_comp(ex)
 
-	(typeof(ex) != Expr || ex.head != :call) && (throw(ArgumentError("`@scache[jld]` can " *
+	!_is_call_expr(ex) && !_is_bc_expr(ex) && (throw(ArgumentError("`@scache[jld]` can " *
 		"be used only with function calls: passed $(ex)")))
 
 	# hyigene
@@ -125,7 +125,7 @@ macro _scache(type, common_cache_dir, ex)
 	t = _convert_input(ex, true)
 
 	rel_esc(ex) = esc(ex, esc_times+1)
-	as, ks, vs, res = (_toexpr(t.args), _toexpr(t.kwargs)..., t.res)
+	as, ks, vs, res, bc = (_toexpr(t.args), _toexpr(t.kwargs)..., t.res, t.broadcast)
 
 	# TODO: make a function that interprets `res` to be inserted in `args` or `kwargs`
 	return quote
@@ -141,7 +141,8 @@ macro _scache(type, common_cache_dir, ex)
 				Dict{Symbol,Any}(
 					pairs($(rel_esc(res)))
 				)
-			)
+			),
+			broadcast = $(rel_esc(bc))
 		))
 
 		if cached_obj_exists($(type), $(common_cache_dir), _hash)
